@@ -38,7 +38,7 @@ def encoder(X_in, digit, keep_prob):
         x = tf.nn.dropout(x, keep_prob)
         x = tf.contrib.layers.flatten(x)
         x = tf.layers.dense(x, 784, activation=activation)
-		# 卷积层之后合并标签digit，然后与全连接层连接
+        # 卷积层之后合并标签digit，然后与全连接层连接
         x = tf.concat([x, digit], 1)
         x = tf.layers.dense(x, 64, activation=activation)
         mn = tf.layers.dense(x, units=n_latent)
@@ -63,7 +63,7 @@ def decoder(sampled_z, digit, keep_prob):
         x = tf.layers.conv2d_transpose(x, filters=64, kernel_size=4, strides=1, padding='same',
                                           activation=tf.nn.relu)
         x = tf.contrib.layers.flatten(x)
-		# 卷积层之后合并标签digit，然后与全连接层连接
+        # 卷积层之后合并标签digit，然后与全连接层连接
         x = tf.concat([x, digit], 1)
         x = tf.layers.dense(x, 128, activation=lrelu)
         x = tf.layers.dense(x, 784, activation=lrelu)

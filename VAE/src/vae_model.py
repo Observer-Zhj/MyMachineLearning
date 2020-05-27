@@ -111,8 +111,6 @@ def train_model():
     sess.close()
 
 
-
-
 # 加载保存的模型
 def use_model():
     tf.reset_default_graph()
@@ -135,6 +133,7 @@ def use_model():
             # plt.imshow(gen_samples[i].reshape(28, 28), cmap='Greys_r')
             # plt.show()
         plt.show()
+
 
 if __name__ == '__main__':
     # train_model()

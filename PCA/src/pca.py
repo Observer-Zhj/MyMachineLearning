@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Author   : ZhengHj
 # @Time     : 2019/5/11 19:07
-# @Project  : testProject
 # @File     : pca.py
 # @Software : PyCharm
 
