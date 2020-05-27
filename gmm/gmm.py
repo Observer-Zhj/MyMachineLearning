@@ -45,6 +45,7 @@ class GMM:
         for i in range(self.max_iter):
             weights = self._e_step(X)
             self._m_step(X, weights)
+        return self
     
     def predict(self, X):
         return np.argmax(self._e_step(X), axis=1)
@@ -58,9 +59,7 @@ class GMM:
         self.phi_ = np.mean(weights, axis=0)
         self.mean_ = self.update_mu(X, weights)
         self.cov_ = self.update_sigma(X, self.mean_, weights)
-        # for i in range(len(self.mean_)):
-        #     self.cov_[i] = self.update_sigma(X, self.mean_[i], weights[:, i])
-    
+        
     def update_mu(self, X, w):
         shape = w.shape
         w = w.T.reshape((shape[1], shape[0], 1))
@@ -72,9 +71,6 @@ class GMM:
         n = X.shape[-1]
         tmp = X[:, :, np.newaxis] - mu[:, np.newaxis, :, np.newaxis]
         tmp = np.matmul(tmp, tmp.reshape((shape[1], shape[0], 1, n)))
-        # tmp = X[:, :, np.newaxis] - mu[:, np.newaxis]
-        # tmp = np.matmul(tmp, tmp.reshape((-1, 1, n)))
-        # tmp = np.sum(tmp * w, axis=1)
         return np.sum(tmp * w, axis=1) / np.sum(w, axis=1)
 
 
