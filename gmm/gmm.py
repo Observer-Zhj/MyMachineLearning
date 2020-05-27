@@ -56,20 +56,26 @@ class GMM:
     
     def _m_step(self, X, weights):
         self.phi_ = np.mean(weights, axis=0)
-        for i in range(len(self.mean_)):
-            self.mean_[i] = self.update_mu(X, weights[:, i])
-            self.cov_[i] = self.update_sigma(X, self.mean_[i], weights[:, i])
+        self.mean_ = self.update_mu(X, weights)
+        self.cov_ = self.update_sigma(X, self.mean_, weights)
+        # for i in range(len(self.mean_)):
+        #     self.cov_[i] = self.update_sigma(X, self.mean_[i], weights[:, i])
     
     def update_mu(self, X, w):
-        w = w.reshape((-1, 1))
-        return np.sum(w * X, axis=0) / np.sum(w)
+        shape = w.shape
+        w = w.T.reshape((shape[1], shape[0], 1))
+        return np.sum(w * X, axis=1) / np.sum(w, axis=1)
     
     def update_sigma(self, X, mu, w):
+        shape = w.shape
+        w = w.T.reshape((shape[1], shape[0], 1, 1))
         n = X.shape[-1]
-        tmp = X[:, :, np.newaxis] - mu[:, np.newaxis]
-        tmp = np.matmul(tmp, tmp.reshape((-1, 1, n)))
-        tmp = np.sum(tmp * w[:, np.newaxis, np.newaxis], axis=0)
-        return tmp / np.sum(w)
+        tmp = X[:, :, np.newaxis] - mu[:, np.newaxis, :, np.newaxis]
+        tmp = np.matmul(tmp, tmp.reshape((shape[1], shape[0], 1, n)))
+        # tmp = X[:, :, np.newaxis] - mu[:, np.newaxis]
+        # tmp = np.matmul(tmp, tmp.reshape((-1, 1, n)))
+        # tmp = np.sum(tmp * w, axis=1)
+        return np.sum(tmp * w, axis=1) / np.sum(w, axis=1)
 
 
 from sklearn.datasets import load_iris
@@ -79,7 +85,7 @@ iris = load_iris()
 
 model = GMM(3)
 t1 = datetime.now()
-model.fit(iris.data.copy())
+model.fit(iris.data)
 t2 = datetime.now()
 print(t2 - t1)
-print(model.predict(iris.data.copy()))
+print(model.predict(iris.data))
