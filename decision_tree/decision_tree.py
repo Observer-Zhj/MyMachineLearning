@@ -12,6 +12,7 @@ from datetime import datetime
 from abc import ABC, abstractmethod
 from sklearn.datasets import load_boston
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 
 def sigmoid(x):
@@ -262,8 +263,12 @@ class GBDTClassifier:
         self.min_samples_leaf = min_samples_leaf
         self._trees = []
         self._init = 0
+        self.class_ = None
     
     def fit(self, data, label):
+        enc = LabelEncoder()
+        label = enc.fit_transform(label)
+        self.class_ = enc.classes_
         self._init = np.mean(label)
         y_ = self._init
         for i in range(self.n_estimators):
@@ -279,7 +284,7 @@ class GBDTClassifier:
     
     def predict(self, data):
         ans = self.predict_proba(data)
-        return np.array([0 if i < 0.5 else 1 for i in ans])
+        return self.class_[[0 if i < 0.5 else 1 for i in ans]]
 
 
 boston = load_boston()
