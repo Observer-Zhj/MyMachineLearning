@@ -45,7 +45,7 @@ class SVM:
         self.max_iter = max_iter
         self.kernel = kernel
         self.sigma = sigma
-        self.pre_conpute = pre_compute
+        self.pre_compute = pre_compute
         self.tol = tol
         self.alpha = None
         self.b = 0
@@ -54,17 +54,19 @@ class SVM:
         self.support_y = None
     
     def cal_kernel(self, X):
+        """ 计算核矩阵 """
         if self.kernel == "rbf":
             return rbf_kernel(X, self.sigma)
         if self.kernel == "linear":
             return linear_kernel(X)
         raise ValueError("kernel must be 'rbf' or 'linear'")
     
-    def cal_single_kernel(self, X):
+    def cal_single_kernel(self, X, Y):
+        """ 计算一个向量X和一个矩阵Y的核 """
         if self.kernel == "rbf":
-            return single_rbf_kernel(X, self.support_vector, self.sigma)
+            return single_rbf_kernel(X, Y, self.sigma)
         if self.kernel == "linear":
-            return single_linear_kernel(X, self.support_vector)
+            return single_linear_kernel(X, Y)
         raise ValueError("kernel must be 'rbf' or 'linear'")
     
     def cal_g(self, y, alpha, kernel):
@@ -173,7 +175,7 @@ class SVM:
         return self
         
     def _predict(self, X):
-        kernel = self.cal_single_kernel(X)
+        kernel = self.cal_single_kernel(X, self.support_vector)
         return np.sum(self.support_alpha * self.support_y * kernel) + self.b
     
     def decision_function(self, X):
