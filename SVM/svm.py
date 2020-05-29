@@ -7,6 +7,7 @@
 """
 
 import numpy as np
+from datetime import datetime
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
@@ -40,6 +41,9 @@ def linear_kernel(X):
 
 
 class SVM:
+    """
+    pre_compute设置是否预计算核矩阵
+    """
     def __init__(self, C=1, max_iter=100, kernel="rbf", sigma=10, pre_compute=True, tol=0.0001):
         self.C = C
         self.max_iter = max_iter
@@ -62,7 +66,7 @@ class SVM:
         raise ValueError("kernel must be 'rbf' or 'linear'")
     
     def cal_single_kernel(self, X, Y):
-        """ 计算一个向量X和一个矩阵Y的核 """
+        """ 计算一个向量X和一个向量/矩阵Y的核 """
         if self.kernel == "rbf":
             return single_rbf_kernel(X, Y, self.sigma)
         if self.kernel == "linear":
@@ -71,6 +75,13 @@ class SVM:
     
     def cal_g(self, y, alpha, kernel):
         return np.sum(alpha * y * kernel) + self.b
+    
+    def cal_G(self, X, y, kernel):
+        if kernel is None:
+            return np.array(
+                [np.sum(self.alpha * y * self.cal_single_kernel(X[i], X)) for i in range(len(self.alpha))]) + self.b
+        else:
+            return np.sum(self.alpha * y * kernel, axis=1) + self.b
     
     def is_satisfy_kkt(self, alpha_1, yg):
         if (np.abs(alpha_1) < 1e-4) and (yg >= 1):
@@ -107,12 +118,19 @@ class SVM:
                     prev = E[i]
         return a2
     
-    def _update(self, a1, E, G, kernel_mat):
+    def get_K(self, kernel_mat, a1, a2, X):
+        if kernel_mat is None:
+            tmp = self.cal_kernel(X[[a1, a2]])
+            return tmp[0, 0], tmp[0, 1], tmp[1, 0], tmp[1, 1]
+        return kernel_mat[a1, a1], kernel_mat[a1, a2], kernel_mat[a2, a1], kernel_mat[a2, a2]
+    
+    def _update(self, X, a1, E, G, kernel_mat):
         e1 = E[a1]
         a2 = self.get_a2(a1, E)
         alpha_1_old = self.alpha[a1]
         alpha_2_old = self.alpha[a2]
         e2 = E[a2]
+        K11, K12, K21, K22 = self.get_K(kernel_mat, a1, a2, X)
         if y[a1] != y[a2]:
             L = max(0, alpha_2_old - alpha_1_old)
             H = min(0, alpha_2_old - alpha_1_old) + self.C
@@ -120,7 +138,7 @@ class SVM:
             L = max(0, alpha_2_old + alpha_1_old - self.C)
             H = min(self.C, alpha_2_old + alpha_1_old)
     
-        eta = kernel_mat[a1, a1] + kernel_mat[a2, a2] - 2 * kernel_mat[a1, a2]
+        eta = K11 + K22 - 2 * K12
         alpha_2_new = np.clip(alpha_2_old + y[a2] * (e1 - e2) / eta, L, H)
         alpha_1_new = alpha_1_old + y[a1] * y[a2] * (self.alpha[a2] - alpha_2_new)
         self.alpha[a1] = alpha_1_new
@@ -128,12 +146,10 @@ class SVM:
     
         if np.abs(self.alpha[a2] - alpha_2_old) < self.tol:
             return 1
+        print(a1, a2)
+        b1 = -e1 - y[a1] * K11 * (alpha_1_new - alpha_1_old) - y[a2] * K21 * (alpha_2_new - alpha_2_old) + self.b
     
-        b1 = -e1 - y[a1] * kernel_mat[a1, a1] * (alpha_1_new - alpha_1_old) - y[a2] * kernel_mat[
-            a2, a1] * (alpha_2_new - alpha_2_old) + self.b
-    
-        b2 = -e2 - y[a1] * kernel_mat[a1, a2] * (alpha_1_new - alpha_1_old) - y[a2] * kernel_mat[
-            a2, a2] * (alpha_2_new - alpha_2_old) + self.b
+        b2 = -e2 - y[a1] * K12 * (alpha_1_new - alpha_1_old) - y[a2] * K22 * (alpha_2_new - alpha_2_old) + self.b
     
         if 0 < self.alpha[a1] < self.C:
             self.b = b1
@@ -142,16 +158,19 @@ class SVM:
         else:
             self.b = (b1 + b2) / 2
         support_index = np.where(self.alpha > 0)[0]
-        G[a1] = self.cal_g(y[support_index], self.alpha[support_index], kernel_mat[a1, support_index])
-        G[a2] = self.cal_g(y[support_index], self.alpha[support_index], kernel_mat[a2, support_index])
+        G[a1] = self.cal_g(y[support_index], self.alpha[support_index], self.cal_single_kernel(X[a1], X[support_index]))
+        G[a2] = self.cal_g(y[support_index], self.alpha[support_index], self.cal_single_kernel(X[a2], X[support_index]))
         E[a1] = G[a1] - y[a1]
         E[a2] = G[a2] - y[a2]
         return 0
     
     def fit(self, X, y):
         self.alpha = np.zeros(len(X))
-        kernel_mat = self.cal_kernel(X)
-        G = np.sum(self.alpha * y * kernel_mat, axis=1) + self.b
+        if self.pre_compute:
+            kernel_mat = self.cal_kernel(X)
+        else:
+            kernel_mat = None
+        G = self.cal_G(X, y, kernel_mat)
         E = G - y
         for i in range(self.max_iter):
             alpha_change = False
@@ -163,9 +182,10 @@ class SVM:
                     alpha_change = True
                 else:
                     continue
-                status = self._update(a1, E, G, kernel_mat)
+                status = self._update(X, a1, E, G, kernel_mat)
                 if status == 0:
                     break
+                alpha_change = False
             if not alpha_change:
                 break
         support_index = np.where(self.alpha > 0)[0]
@@ -176,7 +196,7 @@ class SVM:
         
     def _predict(self, X):
         kernel = self.cal_single_kernel(X, self.support_vector)
-        return np.sum(self.support_alpha * self.support_y * kernel) + self.b
+        return self.cal_g(self.support_y, self.support_alpha, kernel)
     
     def decision_function(self, X):
         return np.array([self._predict(i) for i in X])
@@ -192,18 +212,25 @@ maxx = np.max(bc.data, axis=0)
 minx = np.min(bc.data, axis=0)
 data = (bc.data - minx) / (maxx - minx)
 
-train_X, test_X, train_y, test_y = train_test_split(data, y, test_size=0.3, random_state=5)
+train_X, test_X, train_y, test_y = train_test_split(data, y, test_size=0.3)
 
-svm = SVM(kernel="rbf", sigma=10, max_iter=100, tol=0.01)
+
+svm = SVM(kernel="rbf", sigma=10, max_iter=100, pre_compute=True)
+t1 = datetime.now()
 svm.fit(train_X, train_y)
+t2 = datetime.now()
+print(t2 - t1)
 y_pred = svm.predict(test_X)
 print(confusion_matrix(test_y, y_pred))
 
 print(svm.support_y * svm.decision_function(svm.support_vector))
 
 
-svm = SVM(kernel="linear", max_iter=100)
+svm = SVM(kernel="linear", max_iter=100, pre_compute=True)
+t1 = datetime.now()
 svm.fit(train_X, train_y)
+t2 = datetime.now()
+print(t2 - t1)
 y_pred = svm.predict(test_X)
 print(confusion_matrix(test_y, y_pred))
 
