@@ -84,12 +84,11 @@ class SVM:
             return np.sum(self.alpha * y * kernel, axis=1) + self.b
     
     def is_satisfy_kkt(self, alpha_1, yg):
-        if (np.abs(alpha_1) < 1e-4) and (yg >= 1):
+        if (alpha_1 == 0) and (yg >= 1):
             return True
-        elif (np.abs(alpha_1 - self.C) < 1e-4) and (yg <= 1):
+        elif alpha_1 < self.C and yg == 1:
             return True
-        elif (alpha_1 > -1e-4) and (alpha_1 < (self.C + 1e-4)) \
-                and (np.abs(yg - 1) < 1e-4):
+        elif alpha_1 == self.C and yg <= 1:
             return True
 
         return False
@@ -212,7 +211,7 @@ maxx = np.max(bc.data, axis=0)
 minx = np.min(bc.data, axis=0)
 data = (bc.data - minx) / (maxx - minx)
 
-train_X, test_X, train_y, test_y = train_test_split(data, y, test_size=0.3)
+train_X, test_X, train_y, test_y = train_test_split(data, y, test_size=0.3, random_state=5)
 
 
 svm = SVM(kernel="rbf", sigma=10, max_iter=100, pre_compute=True)
