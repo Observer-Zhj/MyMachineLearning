@@ -235,8 +235,6 @@ print(t2 - t1)
 y_pred = svm.predict(test_X)
 print(confusion_matrix(test_y, y_pred))
 
-print(svm.support_y * svm.decision_function(svm.support_vector))
-
 
 svm = SVM(kernel="linear", max_iter=100, pre_compute=True)
 t1 = datetime.now()
@@ -246,8 +244,6 @@ print(t2 - t1)
 y_pred = svm.predict(test_X)
 print(confusion_matrix(test_y, y_pred))
 
-print(svm.support_y * svm.decision_function(svm.support_vector))
-
 
 svm = SVM(kernel="poly", degree=2, max_iter=100, pre_compute=True)
 t1 = datetime.now()
@@ -256,5 +252,3 @@ t2 = datetime.now()
 print(t2 - t1)
 y_pred = svm.predict(test_X)
 print(confusion_matrix(test_y, y_pred))
-
-print(svm.support_y * svm.decision_function(svm.support_vector))
