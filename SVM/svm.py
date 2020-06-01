@@ -40,15 +40,24 @@ def linear_kernel(X):
     return np.matmul(X, X.T)
 
 
+def single_poly_kernel(x, y, degree):
+    return np.power(single_linear_kernel(x, y) + 1, degree)
+
+
+def poly_kernel(X, degree):
+    return np.power(linear_kernel(X) + 1, degree)
+
+
 class SVM:
     """
     pre_compute设置是否预计算核矩阵
     """
-    def __init__(self, C=1, max_iter=100, kernel="rbf", sigma=10, pre_compute=True, tol=0.0001):
+    def __init__(self, C=1, max_iter=100, kernel="rbf", sigma=10, degree=1, pre_compute=True, tol=0.0001):
         self.C = C
         self.max_iter = max_iter
         self.kernel = kernel
         self.sigma = sigma
+        self.degree = degree
         self.pre_compute = pre_compute
         self.tol = tol
         self.alpha = None
@@ -63,7 +72,9 @@ class SVM:
             return rbf_kernel(X, self.sigma)
         if self.kernel == "linear":
             return linear_kernel(X)
-        raise ValueError("kernel must be 'rbf' or 'linear'")
+        if self.kernel == "poly":
+            return poly_kernel(X, self.degree)
+        raise ValueError("kernel must be in ['rbf', 'linear', 'poly']")
     
     def cal_single_kernel(self, X, Y):
         """ 计算一个向量X和一个向量/矩阵Y的核 """
@@ -71,7 +82,9 @@ class SVM:
             return single_rbf_kernel(X, Y, self.sigma)
         if self.kernel == "linear":
             return single_linear_kernel(X, Y)
-        raise ValueError("kernel must be 'rbf' or 'linear'")
+        if self.kernel == "poly":
+            return single_poly_kernel(X, Y, self.degree)
+        raise ValueError("kernel must be in ['rbf', 'linear', 'poly']")
     
     def cal_g(self, y, alpha, kernel):
         return np.sum(alpha * y * kernel) + self.b
@@ -226,6 +239,17 @@ print(svm.support_y * svm.decision_function(svm.support_vector))
 
 
 svm = SVM(kernel="linear", max_iter=100, pre_compute=True)
+t1 = datetime.now()
+svm.fit(train_X, train_y)
+t2 = datetime.now()
+print(t2 - t1)
+y_pred = svm.predict(test_X)
+print(confusion_matrix(test_y, y_pred))
+
+print(svm.support_y * svm.decision_function(svm.support_vector))
+
+
+svm = SVM(kernel="poly", degree=2, max_iter=100, pre_compute=True)
 t1 = datetime.now()
 svm.fit(train_X, train_y)
 t2 = datetime.now()
