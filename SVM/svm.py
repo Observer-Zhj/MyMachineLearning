@@ -123,7 +123,7 @@ class SVM:
             return tmp[0, 0], tmp[0, 1], tmp[1, 0], tmp[1, 1]
         return kernel_mat[a1, a1], kernel_mat[a1, a2], kernel_mat[a2, a1], kernel_mat[a2, a2]
     
-    def _update(self, X, a1, E, G, kernel_mat):
+    def _update(self, X, y, a1, E, G, kernel_mat):
         e1 = E[a1]
         a2 = self.get_a2(a1, E)
         alpha_1_old = self.alpha[a1]
@@ -181,7 +181,7 @@ class SVM:
                     alpha_change = True
                 else:
                     continue
-                status = self._update(X, a1, E, G, kernel_mat)
+                status = self._update(X, y, a1, E, G, kernel_mat)
                 if status == 0:
                     break
                 alpha_change = False
