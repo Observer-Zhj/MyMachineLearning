@@ -67,6 +67,16 @@ class BaseOperation:
     
     def __idiv__(self, other):
         return self.__truediv__(other)
+    
+    def _grad(self, name=None):
+        pass
+    
+    def grad(self, name=None):
+        if isinstance(name, BaseOperation):
+            name = name.name
+        if name == self.name:
+            return 1
+        return self._grad(name)
 
 
 class Operation(BaseOperation):
@@ -97,7 +107,7 @@ class Constant(BaseOperation):
     def forward(self):
         return self._value
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return 0
 
 
@@ -116,7 +126,7 @@ class Variable(BaseOperation):
     def forward(self):
         return self._value
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         if name is None or name == self.name:
             return 1
         return 0
@@ -130,7 +140,7 @@ class Add(Operation):
     def forward(self):
         return self._op1.forward() + self._op2.forward()
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return self._op1.grad(name) + self._op2.grad(name)
 
 
@@ -142,7 +152,7 @@ class Subtract(Operation):
     def forward(self):
         return self._op1.forward() - self._op2.forward()
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return self._op1.grad(name) - self._op2.grad(name)
 
 
@@ -154,7 +164,7 @@ class Multiple(Operation):
     def forward(self):
         return self._op1.forward() * self._op2.forward()
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return self._op1.forward() * self._op2.grad(name) + self._op2.forward() * self._op1.grad(name)
 
 
@@ -167,7 +177,7 @@ class Power(Operation):
     def forward(self):
         return self._op1.forward() ** self._power
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return self._power * (self._op1.forward() ** (self._power - 1)) * self._op1.grad(name)
 
 
@@ -179,7 +189,7 @@ class Divide(Operation):
     def forward(self):
         return self._op1.forward() / self._op2.forward()
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         x = self._op1.forward()
         y = self._op2.forward()
         dx = self._op1.grad(name)
@@ -195,7 +205,7 @@ class Log(Operation):
     def forward(self):
         return np.log(self._op1.forward())
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return 1 / self._op1.forward() * self._op1.grad(name)
 
 
@@ -207,7 +217,7 @@ class Exp(Operation):
     def forward(self):
         return np.exp(self._op1.forward())
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return self.forward() * self._op1.grad(name)
 
 
@@ -223,7 +233,7 @@ class Sigmoid(Operation):
     def forward(self):
         return _sigmoid(self._op1.forward())
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         x = self._op1.forward()
         return _sigmoid(x) * (1 - _sigmoid(x)) * self._op1.grad(name)
 
@@ -236,7 +246,7 @@ class Tanh(Operation):
     def forward(self):
         return np.tanh(self._op1.forward())
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         return (1 - np.tanh(self._op1.forward()) ** 2) * self._op1.grad(name)
 
 
@@ -251,7 +261,7 @@ class Relu(Operation):
             return 0
         return x
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         if self._op1.forward() <= 0:
             return 0
         return self._op1.grad(name)
@@ -269,7 +279,7 @@ class LeakyRelu(Operation):
             return self._coef * x
         return x
     
-    def grad(self, name=None):
+    def _grad(self, name=None):
         if self._op1.forward() <= 0:
             return self._coef * self._op1.grad(name)
         return self._op1.grad(name)
